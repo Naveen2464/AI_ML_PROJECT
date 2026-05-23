@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-Queens Hill Climbing Visualizer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 50%, #1a153b 0%, #0b071e 100%);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-border-focus: rgba(255, 255, 255, 0.2);
+            --primary: #8a2be2; /* BlueViolet */
+            --primary-glow: rgba(138, 43, 226, 0.4);
+            --secondary: #00ffff; /* Cyan */
+            --secondary-glow: rgba(0, 255, 255, 0.4);
+            --accent: #ff007f; /* Neon Pink for attacks */
+            --accent-glow: rgba(255, 0, 127, 0.5);
+            --success: #39ff14; /* Neon Green */
+            --text-main: #f0edff;
+            --text-muted: #a39ebc;
+            --font-main: 'Outfit', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            --tile-light: rgba(255, 255, 255, 0.05);
+            --tile-dark: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Decorative Background Orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            top: 10%;
+            left: 5%;
+        }
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: var(--secondary);
+            bottom: 10%;
+            right: 5%;
+        }
+
+        header {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            background: rgba(11, 7, 30, 0.5);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--primary-glow);
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        main {
+            flex: 1;
+            padding: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 350px 1fr 380px;
+            gap: 25px;
+            align-content: start;
+        }
+
+        @media (max-width: 1200px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .glass-card:hover {
+            border-color: var(--glass-border-focus);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 12px;
+        }
+
+        .card-title i {
+            color: var(--secondary);
+        }
+
+        /* Controller Layout */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .select-input, .slider-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: #fff;
+            font-family: var(--font-main);
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .select-input:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 10px var(--secondary-glow);
+        }
+
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .range-value {
+            font-family: var(--font-code);
+            font-size: 14px;
+            color: var(--secondary);
+            min-width: 40px;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-family: var(--font-main);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #a04ef6);
+            border: none;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #a04ef6, var(--primary));
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, #00bfff, var(--secondary));
+            border: none;
+            color: #0b071e;
+            box-shadow: 0 4px 15px var(--secondary-glow);
+        }
+
+        .btn-accent:hover {
+            box-shadow: 0 6px 20px rgba(0, 255, 255, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            color: var(--text-muted) !important;
+            border: 1px solid var(--glass-border) !important;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-box.highlight {
+            border-color: var(--accent);
+            background: rgba(255, 0, 127, 0.05);
+        }
+
+        .stat-box.success {
+            border-color: var(--success);
+            background: rgba(57, 255, 20, 0.05);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 800;
+            font-family: var(--font-code);
+        }
+
+        #stat-heuristic {
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
+        }
+
+        .success #stat-heuristic {
+            color: var(--success);
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+        }
+
+        /* Middle Visualizer */
+        .visualizer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .board-wrapper {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border: 4px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 10px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .chessboard {
+            display: grid;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .tile {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: background-color 0.3s;
+        }
+
+        .tile.light {
+            background-color: var(--tile-light);
+        }
+
+        .tile.dark {
+            background-color: var(--tile-dark);
+        }
+
+        .tile.highlight-eval {
+            background-color: rgba(0, 255, 255, 0.15) !important;
+        }
+
+        .tile.highlight-best {
+            background-color: rgba(57, 255, 20, 0.2) !important;
+        }
+
+        .queen {
+            width: 75%;
+            height: 75%;
+            background: radial-gradient(circle, #ffe066 0%, #f5b041 100%);
+            border-radius: 50%;
+            position: relative;
+            z-index: 2;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(245, 176, 65, 0.6), inset 0 2px 5px rgba(255,255,255,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease;
+        }
+
+        .queen.attacking {
+            background: radial-gradient(circle, #ff6b8b 0%, #ff0055 100%);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.8), inset 0 2px 5px rgba(255,255,255,0.5);
+        }
+
+        .queen::before {
+            content: '👑';
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* SVG Overlays for Laser lines */
+        .svg-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: calc(100% - 20px);
+            height: calc(100% - 20px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .attack-line {
+            stroke: var(--accent);
+            stroke-width: 3;
+            stroke-linecap: round;
+            opacity: 0.8;
+            stroke-dasharray: 8 4;
+            animation: dash 1s linear infinite, glowPulse 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+
+        @keyframes glowPulse {
+            from {
+                filter: drop-shadow(0 0 2px var(--accent-glow));
+            }
+            to {
+                filter: drop-shadow(0 0 8px var(--accent));
+            }
+        }
+
+        /* Log Panel */
+        .log-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 480px;
+        }
+
+        .log-terminal {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            flex: 1;
+            font-family: var(--font-code);
+            font-size: 13px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            scroll-behavior: smooth;
+        }
+
+        .log-entry {
+            line-height: 1.5;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .log-entry.info { color: var(--text-muted); }
+        .log-entry.success { color: var(--success); font-weight: 600;}
+        .log-entry.warning { color: #ff9900; }
+        .log-entry.error { color: var(--accent); }
+        .log-entry.action { color: var(--secondary); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Explanatory Tab Panel */
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--glass-border);
+            gap: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 5px;
+            font-family: var(--font-main);
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--secondary);
+            border-radius: 2px;
+        }
+
+        .tab-content {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .highlight-text {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .code-snippet {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: var(--font-code);
+            font-size: 12px;
+            overflow-x: auto;
+            color: #88c0d0;
+            margin-top: 10px;
+        }
+
+        /* Legend */
+        .legend-box {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        /* Tooltips */
+        .tooltip {
+            position: relative;
+        }
+
+        /* Success Confetti Effect overlay */
+        .success-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(57, 255, 20, 0.05);
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+        }
+
+        .success-overlay.active {
+            opacity: 1;
+        }
+
+        .success-text {
+            color: var(--success);
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(57, 255, 20, 0.6);
+            transform: scale(0.5);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .success-overlay.active .success-text {
+            transform: scale(1);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">👑</div>
+            <div>
+                <h1>N-Queens Solver</h1>
+                <p class="subtitle">Hill Climbing with Random Restarts Visualizer</p>
+            </div>
+        </div>
+        <div>
+            <span class="subtitle">AI Lab Demonstration</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Side: Controls & Stats -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Controller Panel -->
+            <section class="glass-card">
+                <h2 class="card-title">⚙️ Control Center</h2>
+                
+                <!-- Board Size Selector -->
+                <div class="control-group">
+                    <label for="board-size">Chessboard Size (N)</label>
+                    <select id="board-size" class="select-input">
+                        <option value="4">4 x 4 (Simple)</option>
+                        <option value="5">5 x 5</option>
+                        <option value="6">6 x 6</option>
+                        <option value="7">7 x 7</option>
+                        <option value="8" selected>8 x 8 (Standard)</option>
+                        <option value="9">9 x 9</option>
+                        <option value="10">10 x 10</option>
+                    </select>
+                </div>
+
+                <!-- Step Speed Slider -->
+                <div class="control-group">
+                    <label for="speed-slider">Step Duration (Speed)</label>
+                    <div class="range-container">
+                        <input type="range" id="speed-slider" class="slider-input" min="50" max="2000" value="500" step="50">
+                        <span class="range-value" id="speed-val">500ms</span>
+                    </div>
+                </div>
+
+                <!-- Simulation Mode Action Buttons -->
+                <div class="btn-grid">
+                    <button id="btn-start" class="btn btn-primary">▶ Run</button>
+                    <button id="btn-pause" class="btn" disabled>⏸ Pause</button>
+                </div>
+
+                <div class="btn-grid">
+                    <button id="btn-step" class="btn btn-accent">⏭ Step Forward</button>
+                    <button id="btn-reset" class="btn">🔄 Reset</button>
+                </div>
+            </section>
+
+            <!-- Metrics Panel -->
+            <section class="glass-card">
+                <h2 class="card-title">📊 Solver Metrics</h2>
+                <div class="stats-grid">
+                    <div class="stat-box highlight" id="heuristic-card">
+                        <span class="stat-label">Attacking Pairs (H)</span>
+                        <span class="stat-value" id="stat-heuristic">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Random Restarts</span>
+                        <span class="stat-value" id="stat-restarts">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Steps Climbed</span>
+                        <span class="stat-value" id="stat-steps">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">States Explored</span>
+                        <span class="stat-value" id="stat-explored">0</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Center Panel: The Chessboard and Laser Overlay -->
+        <div class="visualizer-container">
+            <div class="board-wrapper">
+                <!-- SVG Canvas overlay for laser lines representing attacking queens -->
+                <svg class="svg-overlay" id="attack-lines-svg"></svg>
+                
+                <!-- HTML Grid Board -->
+                <div class="chessboard" id="chessboard"></div>
+
+                <!-- Success celebration banner -->
+                <div class="success-overlay" id="success-overlay">
+                    <div class="success-text">Goal State Reached!</div>
+                </div>
+            </div>
+
+            <!-- Visual Legend -->
+            <div class="legend-box">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: radial-gradient(circle, #ffe066 0%, #f5b041 100%); box-shadow: 0 0 10px rgba(245,176,65,0.5)"></div>
+                    <span>Safe Queen</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: radial-gradient(circle, #ff6b8b 0%, #ff0055 100%); box-shadow: 0 0 10px rgba(255,0,85,0.5)"></div>
+                    <span>Attacking Queen</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: rgba(0, 255, 255, 0.2); border: 1px solid var(--secondary);"></div>
+                    <span>Tested Moves</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Explanation and Live Command Line / Steps Logs -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Algorithm Explainer Tabs -->
+            <section class="glass-card">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="how-it-works">Explanation</button>
+                    <button class="tab-btn" data-tab="pseudocode">Pseudocode</button>
+                </div>
+                
+                <div class="tab-content active" id="tab-how-it-works">
+                    <p style="margin-bottom: 12px;">The <span class="highlight-text">N-Queens Problem</span> places N queens on an N×N board such that no two queens attack each other.</p>
+                    <p style="margin-bottom: 12px;"><span class="highlight-text">Hill Climbing</span> is a local search algorithm. It begins with a random configuration (one queen per column) and repeatedly moves a queen to a better row in its column to minimize attacks.</p>
+                    <p><span class="highlight-text">Random Restart</span> counters the "local optimum" problem. If no single-queen move reduces attacks, the board resets randomly to try a new path.</p>
+                </div>
+
+                <div class="tab-content" id="tab-pseudocode">
+                    <p style="margin-bottom: 8px;">Steepest-Ascent Hill Climbing:</p>
+                    <pre class="code-snippet">
+function HILL-CLIMBING(problem)
+  current = make_node(problem.InitialState)
+  loop do
+    neighbor = highest_valued_successor(current)
+    if neighbor.Value <= current.Value
+      return current.State // Local max/min
+    current = neighbor
+                    </pre>
+                </div>
+            </section>
+
+            <!-- Real-time Step Log console -->
+            <section class="glass-card log-container">
+                <h2 class="card-title">📜 Step-by-Step Live Log</h2>
+                <div class="log-terminal" id="log-terminal">
+                    <div class="log-entry info">System ready. Select N and click Run or Step Forward.</div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        // --- Core Algorithm State Machine & Visualization Logic ---
+        
+        let N = 8;
+        let board = []; // index represents column, value represents row (0 to N-1)
+        let attacks = 0;
+        let restarts = 0;
+        let steps = 0;
+        let statesExplored = 0;
+
+        // Visualizer operational states
+        const STATES = {
+            IDLE: 'idle',
+            INITIALIZED: 'initialized',
+            EVALUATING_HEURISTIC: 'evaluating_heuristic',
+            EXPLORING_NEIGHBORS: 'exploring_neighbors',
+            MOVING: 'moving',
+            LOCAL_OPTIMUM: 'local_optimum',
+            SUCCESS: 'success'
+        };
+        let currentVisualState = STATES.IDLE;
+        let runTimer = null;
+        let isRunning = false;
+        
+        // Step Queue Generator
+        let stepGenerator = null;
+
+        // UI DOM elements
+        const boardSizeSelect = document.getElementById('board-size');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedVal = document.getElementById('speed-val');
+        const btnStart = document.getElementById('btn-start');
+        const btnPause = document.getElementById('btn-pause');
+        const btnStep = document.getElementById('btn-step');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const statHeuristic = document.getElementById('stat-heuristic');
+        const statRestarts = document.getElementById('stat-restarts');
+        const statSteps = document.getElementById('stat-steps');
+        const statExplored = document.getElementById('stat-explored');
+        const heuristicCard = document.getElementById('heuristic-card');
+        
+        const chessboardEl = document.getElementById('chessboard');
+        const svgOverlay = document.getElementById('attack-lines-svg');
+        const logTerminal = document.getElementById('log-terminal');
+        const successOverlay = document.getElementById('success-overlay');
+
+        // Tab selection logic
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+            });
+        });
+
+        // Speed slider text change
+        speedSlider.addEventListener('input', (e) => {
+            speedVal.innerText = `${e.target.value}ms`;
+            if (isRunning) {
+                pauseAutoRun();
+                startAutoRun();
+            }
+        });
+
+        // Initialize empty board
+        function renderChessboardSkeleton() {
+            chessboardEl.innerHTML = '';
+            chessboardEl.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+            chessboardEl.style.gridTemplateRows = `repeat(${N}, 1fr)`;
+            
+            // Set size of chessboard container to be square
+            const size = Math.min(500, window.innerWidth - 60);
+            chessboardEl.style.width = `${size}px`;
+            chessboardEl.style.height = `${size}px`;
+
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.classList.add((r + c) % 2 === 0 ? 'light' : 'dark');
+                    tile.dataset.row = r;
+                    tile.dataset.col = c;
+                    tile.id = `tile-${r}-${c}`;
+                    chessboardEl.appendChild(tile);
+                }
+            }
+            svgOverlay.innerHTML = '';
+        }
+
+        // Add Log entry to panel
+        function addLog(text, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            entry.innerHTML = `<span style="color: var(--text-muted); font-size:11px;">[${time}]</span> ${text}`;
+            logTerminal.appendChild(entry);
+            logTerminal.scrollTop = logTerminal.scrollHeight;
+        }
+
+        // Calculate heuristic and draw attacking line lasers
+        function calculateHeuristicAndVisualize(currentBoard) {
+            svgOverlay.innerHTML = '';
+            const attackingPairs = [];
+            const isAttacking = new Array(N).fill(false);
+
+            // Find all attacking queen coordinates
+            for (let i = 0; i < N; i++) {
+                for (let j = i + 1; j < N; j++) {
+                    const rowI = currentBoard[i];
+                    const rowJ = currentBoard[j];
+                    
+                    // Attack condition: same row or same diagonal
+                    if (rowI === rowJ || Math.abs(rowI - rowJ) === Math.abs(i - j)) {
+                        attackingPairs.push({ col1: i, row1: rowI, col2: j, row2: rowJ });
+                        isAttacking[i] = true;
+                        isAttacking[j] = true;
+                    }
+                }
+            }
+
+            // Draw Queens on Chessboard
+            for (let c = 0; c < N; c++) {
+                // Clear existing queens in this column
+                for (let r = 0; r < N; r++) {
+                    const tile = document.getElementById(`tile-${r}-${c}`);
+                    const oldQueen = tile.querySelector('.queen');
+                    if (oldQueen) oldQueen.remove();
+                }
+                
+                // Add the queen at currentBoard[c]
+                const targetTile = document.getElementById(`tile-${currentBoard[c]}-${c}`);
+                const queen = document.createElement('div');
+                queen.className = 'queen';
+                if (isAttacking[c]) {
+                    queen.classList.add('attacking');
+                }
+                targetTile.appendChild(queen);
+            }
+
+            // Draw Attacking Laser lines
+            const rect = chessboardEl.getBoundingClientRect();
+            const tileSize = rect.width / N;
+
+            attackingPairs.forEach(pair => {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                
+                // Coordinates from centers of the tiles
+                const x1 = (pair.col1 + 0.5) * tileSize;
+                const y1 = (pair.row1 + 0.5) * tileSize;
+                const x2 = (pair.col2 + 0.5) * tileSize;
+                const y2 = (pair.row2 + 0.5) * tileSize;
+
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('class', 'attack-line');
+                svgOverlay.appendChild(line);
+            });
+
+            return attackingPairs.length;
+        }
+
+        // Simple non-visual heuristic calculator for evaluating neighbors
+        function getHeuristic(testBoard) {
+            let count = 0;
+            for (let i = 0; i < N; i++) {
+                for (let j = i + 1; j < N; j++) {
+                    if (testBoard[i] === testBoard[j] || Math.abs(testBoard[i] - testBoard[j]) === Math.abs(i - j)) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        // Setup a randomized initial state
+        function randomizeBoard() {
+            board = [];
+            for (let i = 0; i < N; i++) {
+                board.push(Math.floor(Math.random() * N));
+            }
+            steps = 0;
+            statesExplored = 0;
+            updateMetricsUI();
+        }
+
+        function updateMetricsUI() {
+            statHeuristic.innerText = attacks;
+            statRestarts.innerText = restarts;
+            statSteps.innerText = steps;
+            statExplored.innerText = statesExplored;
+
+            if (attacks === 0) {
+                heuristicCard.className = 'stat-box success';
+            } else {
+                heuristicCard.className = 'stat-box highlight';
+            }
+        }
+
+        // Generator that yields state controls step-by-step
+        function* solveGenerator() {
+            addLog(`🚀 Commencing Search for N = ${N}...`, 'action');
+            
+            while (true) {
+                // Step 1: Initial state or restart state
+                currentVisualState = STATES.INITIALIZED;
+                attacks = calculateHeuristicAndVisualize(board);
+                updateMetricsUI();
+                addLog(`🎲 Generated board state: <strong>[${board.join(', ')}]</strong>. Calculating initial attacks...`, 'info');
+                yield;
+
+                // Step 2: Show Heuristic Evaluation
+                currentVisualState = STATES.EVALUATING_HEURISTIC;
+                addLog(`🔍 Current Cost (Heuristic Value) is <strong>${attacks}</strong> attacking queen pairs.`, attacks === 0 ? 'success' : 'warning');
+                if (attacks === 0) {
+                    currentVisualState = STATES.SUCCESS;
+                    addLog(`🎉 Perfect Solution Found! Complete goal state achieved.`, 'success');
+                    triggerSuccessUI();
+                    return;
+                }
+                yield;
+
+                // Step 3: Explore Neighbors
+                currentVisualState = STATES.EXPLORING_NEIGHBORS;
+                addLog(`⚙️ Scanning all possible board neighbors to find the steepest descent gradient...`, 'info');
+                
+                let minAttacks = attacks;
+                let bestMove = null; // { col, row }
+                
+                // Flash animation indicating neighborhood scan
+                for (let col = 0; col < N; col++) {
+                    // Highlight the current column being modified
+                    for (let row = 0; row < N; row++) {
+                        if (board[col] !== row) {
+                            statesExplored++;
+                            const testBoard = [...board];
+                            testBoard[col] = row;
+                            const h = getHeuristic(testBoard);
+
+                            // Highlight searched tile visually
+                            const tile = document.getElementById(`tile-${row}-${col}`);
+                            tile.classList.add('highlight-eval');
+                            
+                            if (h < minAttacks) {
+                                minAttacks = h;
+                                bestMove = { col, row };
+                            }
+                        }
+                    }
+                }
+                updateMetricsUI();
+                yield; // Yield to show evaluated neighborhood highlights
+
+                // Clear highlights
+                document.querySelectorAll('.tile').forEach(t => t.classList.remove('highlight-eval'));
+
+                if (bestMove) {
+                    // Highlight the single best move found
+                    const bestTile = document.getElementById(`tile-${bestMove.row}-${bestMove.col}`);
+                    bestTile.classList.add('highlight-best');
+
+                    currentVisualState = STATES.MOVING;
+                    addLog(`🎯 Found better neighbor state by moving queen in Column ${bestMove.col} to Row ${bestMove.row} (Attacks: ${attacks} ➔ ${minAttacks}).`, 'action');
+                    yield;
+
+                    // Execute the move
+                    bestTile.classList.remove('highlight-best');
+                    board[bestMove.col] = bestMove.row;
+                    steps++;
+                    attacks = minAttacks;
+                    calculateHeuristicAndVisualize(board);
+                    updateMetricsUI();
+                } else {
+                    // Step 4: Stalled at a Local Optimum, trigger Random Restart
+                    currentVisualState = STATES.LOCAL_OPTIMUM;
+                    restarts++;
+                    addLog(`⚠️ Stuck in Local Optimum! No single-queen move reduces attacks. Triggering a Random Restart!`, 'error');
+                    yield;
+
+                    randomizeBoard();
+                    calculateHeuristicAndVisualize(board);
+                }
+            }
+        }
+
+        function triggerSuccessUI() {
+            successOverlay.classList.add('active');
+            btnStart.disabled = true;
+            btnPause.disabled = true;
+            btnStep.disabled = true;
+            isRunning = false;
+            clearInterval(runTimer);
+        }
+
+        function clearSuccessUI() {
+            successOverlay.classList.remove('active');
+            btnStart.disabled = false;
+            btnStep.disabled = false;
+        }
+
+        // Play/Pause/Reset Controls
+        function initVisualization() {
+            N = parseInt(boardSizeSelect.value);
+            restarts = 0;
+            steps = 0;
+            statesExplored = 0;
+            
+            clearSuccessUI();
+            renderChessboardSkeleton();
+            randomizeBoard();
+            attacks = calculateHeuristicAndVisualize(board);
+            updateMetricsUI();
+            
+            stepGenerator = solveGenerator();
+            addLog(`Ready. Chessboard initialized with size ${N}x${N}.`, 'info');
+        }
+
+        function stepForward() {
+            if (!stepGenerator) {
+                initVisualization();
+            }
+            const result = stepGenerator.next();
+            if (result.done) {
+                pauseAutoRun();
+            }
+        }
+
+        function startAutoRun() {
+            if (isRunning) return;
+            isRunning = true;
+            btnStart.innerHTML = '⏸ Pause';
+            btnStart.classList.remove('btn-primary');
+            btnPause.disabled = false;
+            btnStep.disabled = true;
+            
+            const delay = parseInt(speedSlider.value);
+            runTimer = setInterval(() => {
+                stepForward();
+            }, delay);
+            addLog(`Automatic playback started (${delay}ms steps).`, 'info');
+        }
+
+        function pauseAutoRun() {
+            if (!isRunning) return;
+            isRunning = false;
+            btnStart.innerHTML = '▶ Run';
+            btnStart.classList.add('btn-primary');
+            btnPause.disabled = true;
+            btnStep.disabled = false;
+            clearInterval(runTimer);
+            addLog(`Automatic playback paused.`, 'info');
+        }
+
+        // Wire Event Listeners
+        btnStart.addEventListener('click', () => {
+            if (isRunning) {
+                pauseAutoRun();
+            } else {
+                startAutoRun();
+            }
+        });
+
+        btnPause.addEventListener('click', pauseAutoRun);
+        btnStep.addEventListener('click', stepForward);
+        btnReset.addEventListener('click', () => {
+            pauseAutoRun();
+            initVisualization();
+        });
+
+        boardSizeSelect.addEventListener('change', () => {
+            pauseAutoRun();
+            initVisualization();
+        });
+
+        // First initialization
+        window.addEventListener('resize', () => {
+            // Re-render skeletons on resize to keep grid perfectly square
+            renderChessboardSkeleton();
+            calculateHeuristicAndVisualize(board);
+        });
+
+        initVisualization();
+
+    </script>
+</body>
+</html>
